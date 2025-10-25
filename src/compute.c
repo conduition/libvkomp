@@ -174,7 +174,7 @@ int vkomp_flow_stage_compiled_init(
   // Create the compute pipeline object.
   VkPipeline pipeline;
   err = vulkan_setup_pipeline(device, shader, pipeline_layout, spec_info_ptr, &pipeline);
-  vulkan_free_specialization_info(&spec_info);
+  vulkan_free_specialization_info(spec_info_ptr);
   if (err) {
     vkomp_flow_stage_compiled_free(device, *compiled);
     return err;

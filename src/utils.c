@@ -207,10 +207,12 @@ void vulkan_setup_specialization_info(
 }
 
 void vulkan_free_specialization_info(VkSpecializationInfo* spec_info) {
-  free((void*) spec_info->pData);
-  free((void*) spec_info->pMapEntries);
-  spec_info->pData = NULL;
-  spec_info->pMapEntries = NULL;
+  if (spec_info != NULL) {
+    free((void*) spec_info->pData);
+    free((void*) spec_info->pMapEntries);
+    spec_info->pData = NULL;
+    spec_info->pMapEntries = NULL;
+  }
 }
 
 int vulkan_setup_pipeline(
