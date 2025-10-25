@@ -3,7 +3,7 @@ SRC := $(wildcard src/*.c)
 OBJ := $(SRC:.c=.o)
 
 CC     ?= cc
-CFLAGS += -O3 -Wall -Wextra -Werror=pedantic -Werror=vla -Iinclude
+CFLAGS += -O3 -Wall -Wextra -Werror=pedantic -Werror=vla -Iinclude -std=c99
 
 lib/libvkomp.a: lib $(OBJ)
 	ar rcs -o $@ $(OBJ)
