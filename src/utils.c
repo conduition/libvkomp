@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "errors.h"
 
 int vulkan_find_compute_queue_family(VkPhysicalDevice dev_phy) {
   uint32_t queue_family_count = 0;
@@ -37,10 +38,10 @@ static int vulkan_find_memory_type_index(
     ) {
       *mem_type_index = i;
       *actual_properties = mem_properties.memoryTypes[i].propertyFlags;
-      return VK_SUCCESS;
+      return 0;
     }
   }
-  return -1; // TODO: Label error
+  return VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND;
 }
 
 int vulkan_setup_buffer(
@@ -87,11 +88,11 @@ int vulkan_alloc_buffer_memory(
     actual_mem_properties,
     &allocate_info.memoryTypeIndex
   );
-  if (err != VK_SUCCESS) return err;
+  if (err) return err;
 
   // Allocates memory on the device.
   err = vkAllocateMemory(device, &allocate_info, NULL, memory);
-  if (err != VK_SUCCESS) return err;
+  if (err) return err;
 
   // Bind the vulkan buffer object to the memory backing.
   return vkBindBufferMemory(device, buffer, *memory, /* offset */ 0);

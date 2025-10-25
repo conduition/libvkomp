@@ -40,7 +40,7 @@ void vkomp_context_free(VkompContext ctx);
 int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx);
 
 // Describes what type of memory is to be used for this buffer.
-typedef enum {
+typedef enum VkompBufferType {
   // Host accessible memory. Writing data to this will be much slower, but the CPU
   // can easily access it, so this is suitable for small output buffers.
   VKOMP_BUFFER_TYPE_HOST = 1,

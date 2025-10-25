@@ -3,6 +3,7 @@
 
 #include "utils.h"
 #include "vkomp.h"
+#include "errors.h"
 
 #define MIN(a, b) (a < b ? a : b)
 
@@ -12,7 +13,8 @@ void vkomp_context_free(VkompContext ctx) {
 }
 
 int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx) {
-  if (device_info.compute_queue_family < 0) return -8; // TODO: label
+  if (device_info.compute_queue_family < 0)
+    return VKOMP_ERROR_DEVICE_CANNOT_COMPUTE;
 
   // Create the logical device handle
   VkDeviceQueueCreateInfo queue_create_info = {
@@ -75,7 +77,7 @@ int vkomp_buffer_init(
       mem_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
       break;
     default:
-      return -9; // TODO label
+      return VKOMP_ERROR_INVALID_BUFFER_TYPE;
   }
 
   VkMemoryPropertyFlags actual_mem_properties;
