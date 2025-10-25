@@ -2,17 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <dirent.h>
 
-// https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
+#include "utils.h"
 
 int run_test(const char* executable, int* exit_status) {
   pid_t pid = fork();
@@ -51,12 +45,12 @@ int main() {
   while ((ent = readdir(dir)) != NULL) {
     char* suffix = strrchr(ent->d_name, '.');
     if (suffix != NULL && strcmp(suffix, ".test") == 0) {
-      printf("RUN " ANSI_COLOR_CYAN "%s" ANSI_COLOR_RESET "\n", ent->d_name);
+      printf("RUN " ANSI_COLOR_MAGENTA "%s" ANSI_COLOR_RESET "\n", ent->d_name);
 
       int test_status;
       int run_status = run_test(ent->d_name, &test_status);
 
-      printf("  ");
+      printf(ANSI_COLOR_RESET "  ");
 
       if (run_status) {
         printf(ANSI_COLOR_RED "FAILED: cannot run test (%d)\n" ANSI_COLOR_RESET, test_status);
@@ -68,15 +62,21 @@ int main() {
         if (exit_code == 0) {
           printf(ANSI_COLOR_GREEN "OK\n" ANSI_COLOR_RESET);
         } else {
-          printf(ANSI_COLOR_RED "FAILED: exit status %d\n" ANSI_COLOR_RESET, test_status);
+          printf(ANSI_COLOR_RED "FAILED: test exited with code %d\n" ANSI_COLOR_RESET, exit_code);
           error = exit_code;
         }
-      }
-      else if (WIFSIGNALED(test_status)) {
-        printf(ANSI_COLOR_RED "FAILED: test terminated with signal %d\n" ANSI_COLOR_RESET, WTERMSIG(test_status));
+      } else if (WIFSIGNALED(test_status)) {
+        int sig = WTERMSIG(test_status);
+        char* sig_text = strsignal(sig);
+        printf(ANSI_COLOR_RED "FAILED: test terminated: ");
+        if (sig_text != NULL) {
+          printf("%s", sig_text);
+        } else {
+          printf("signal %d", sig);
+        }
+        printf("%s\n", ANSI_COLOR_RESET);
         error = -4;
-      }
-      else {
+      } else {
         error = -5;
       }
       printf("\n");

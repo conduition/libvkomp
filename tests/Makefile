@@ -1,5 +1,6 @@
 TEST_RUNNER := runner
 
+HDR   := $(wildcard *.h)
 SRC   := $(filter-out $(TEST_RUNNER).c,$(wildcard *.c))
 TESTS := $(SRC:.c=.test)
 
@@ -13,13 +14,13 @@ SHADERS    := $(wildcard shaders/*.comp)
 SPV        := $(SHADERS:.comp=.spv)
 SHADER_HDR := $(SPV:.spv=.h)
 
-$(TEST_RUNNER): $(TEST_RUNNER).c $(TESTS)
+$(TEST_RUNNER): $(TEST_RUNNER).c $(TESTS) $(HDR)
 	$(CC) $(CFLAGS) -o $@ $<
 
 run: $(TEST_RUNNER) $(TESTS)
 	./$(TEST_RUNNER)
 
-%.test: %.c $(SHADER_HDR)
+%.test: %.c $(SHADER_HDR) $(HDR)
 	$(CC) $(CFLAGS) -o $@ $< -L../lib -lvkomp -lvulkan
 
 %.spv: %.comp
