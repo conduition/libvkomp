@@ -1,0 +1,4 @@
+*.test
+*.spv
+shaders/*.h
+runner

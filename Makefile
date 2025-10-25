@@ -5,12 +5,18 @@ OBJ := $(SRC:.c=.o)
 CC     ?= cc
 CFLAGS += -O3 -Wall -Wextra -Werror=pedantic -Werror=vla -Iinclude
 
-libvkomp.a: $(OBJ)
+lib/libvkomp.a: lib $(OBJ)
 	ar rcs -o $@ $(OBJ)
+
+lib:
+	@mkdir -p lib
 
 %.o: %.c $(HDR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+test: lib/libvkomp.a
+	make -C tests run
+
 .PHONY: clean
 clean:
-	rm -f $(OBJ) libvkomp.a
+	rm -f $(OBJ) lib/libvkomp.a
