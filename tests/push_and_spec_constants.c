@@ -4,8 +4,8 @@
 #include "shaders/square_with_consts.h"
 #include "utils.h"
 
-#define ERR_NO_USABLE_DEVICE 10002
-#define ERR_INVALID_OUTPUT 10003
+#define ERR_NO_USABLE_DEVICE 50
+#define ERR_INVALID_OUTPUT 51
 #define N_THREADS 100
 #define WORK_GROUP_SIZE 16
 
@@ -35,6 +35,7 @@ int main() {
 
   if (devices_count == 0) {
     eprintf("no vulkan devices found\n");
+    err = ERR_NO_USABLE_DEVICE;
     goto cleanup;
   }
 
