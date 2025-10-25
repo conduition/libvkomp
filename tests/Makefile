@@ -10,6 +10,11 @@ CFLAGS += -O3 -Wall -Wextra -Werror=pedantic -Werror=vla -I../include
 GLSLC      ?= glslangValidator
 GLSLCFLAGS += --target-env vulkan1.2
 
+# glslangValidator prints file names when compiling unless we give it the --quiet flag.
+ifeq ($(GLSLC), glslangValidator)
+	GLSLCFLAGS += --quiet
+endif
+
 SHADERS    := $(wildcard shaders/*.comp)
 SPV        := $(SHADERS:.comp=.spv)
 SHADER_HDR := $(SPV:.spv=.h)
