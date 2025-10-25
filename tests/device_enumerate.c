@@ -14,28 +14,28 @@ int main() {
   VkInstanceCreateInfo create_info = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
   int err = vkCreateInstance(&create_info, NULL, &instance);
   if (err) {
-    fprintf(stderr, "error creating vulkan instance\n");
+    eprintf("error creating vulkan instance\n");
     return err;
   }
 
   uint32_t devices_count;
   err = vkomp_devices_count(instance, &devices_count);
   if (err) {
-    fprintf(stderr, "failed to count vulkan devices\n");
+    eprintf("failed to count vulkan devices\n");
     goto cleanup;
   }
 
   devices = malloc(devices_count * sizeof(VkompDeviceInfo));
   err = vkomp_devices_enumerate(instance, devices_count, devices);
   if (err) {
-    fprintf(stderr, "failed to enumerate vulkan devices\n");
+    eprintf("failed to enumerate vulkan devices\n");
     goto cleanup;
   }
 
   int best_device_index = vkomp_find_best_device(devices, devices_count);
   if (best_device_index < 0) {
     err = ERR_NO_USABLE_DEVICE;
-    fprintf(stderr, "no vulkan devices available\n");
+    eprintf("no vulkan devices available\n");
     goto cleanup;
   }
 

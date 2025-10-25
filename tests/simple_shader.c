@@ -17,7 +17,7 @@ int test_device(VkompDeviceInfo device) {
 
   int err = vkomp_context_init(device, &ctx);
   if (err) {
-    fprintf(stderr, "error initializing VkompContext\n");
+    eprintf("error initializing VkompContext\n");
     goto cleanup;
   }
 
@@ -29,7 +29,7 @@ int test_device(VkompDeviceInfo device) {
     &compbuf
   );
   if (err) {
-    fprintf(stderr, "error initializing VkompBuffer\n");
+    eprintf("error initializing VkompBuffer\n");
     goto cleanup;
   }
   printf("created buffer of size %lu\n", compbuf.size);
@@ -38,7 +38,7 @@ int test_device(VkompDeviceInfo device) {
   uint32_t* mapped_words = NULL;
   err = vkomp_buffer_map(ctx, compbuf, (void**) &mapped_words);
   if (err) {
-    fprintf(stderr, "error mapping VkompBuffer\n");
+    eprintf("error mapping VkompBuffer\n");
     goto cleanup;
   }
   mapped_words[0] = N_THREADS;
@@ -62,28 +62,28 @@ int test_device(VkompDeviceInfo device) {
 
   err = vkomp_flow_init(ctx, stages, stages_len, &flow);
   if (err) {
-    fprintf(stderr, "error initializing VkompFlow\n");
+    eprintf("error initializing VkompFlow\n");
     goto cleanup;
   }
   printf("initialized the compute flow\n");
 
   err = vkomp_flow_run(ctx, flow);
   if (err) {
-    fprintf(stderr, "error running VkompFlow\n");
+    eprintf("error running VkompFlow\n");
     goto cleanup;
   }
   printf("executed shader\n");
 
   err = vkomp_buffer_map(ctx, compbuf, (void**) &mapped_words);
   if (err) {
-    fprintf(stderr, "error mapping output from VkompBuffer\n");
+    eprintf("error mapping output from VkompBuffer\n");
     goto cleanup;
   }
 
   for (uint32_t i = 1; i < N_THREADS + 1; i++) {
     if (mapped_words[i] != i * i) {
       err = ERR_INVALID_OUTPUT;
-      fprintf(stderr, "found invalid square shader output: %u^2 != %u\n", i, mapped_words[i]);
+      eprintf("found invalid square shader output: %u^2 != %u\n", i, mapped_words[i]);
       goto cleanup;
     }
   }
@@ -109,40 +109,40 @@ int main() {
   VkInstanceCreateInfo create_info = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
   int err = vkCreateInstance(&create_info, NULL, &instance);
   if (err) {
-    fprintf(stderr, "error creating vulkan instance\n");
+    eprintf("error creating vulkan instance\n");
     return err;
   }
 
   uint32_t devices_count;
   err = vkomp_devices_count(instance, &devices_count);
   if (err) {
-    fprintf(stderr, "error counting vulkan devices\n");
+    eprintf("error counting vulkan devices\n");
     goto cleanup;
   }
 
   if (devices_count == 0) {
-    fprintf(stderr, "no vulkan devices found\n");
+    eprintf("no vulkan devices found\n");
     goto cleanup;
   }
 
   devices = malloc(devices_count * sizeof(VkompDeviceInfo));
   err = vkomp_devices_enumerate(instance, devices_count, devices);
   if (err) {
-    fprintf(stderr, "error enumerating vulkan devices\n");
+    eprintf("error enumerating vulkan devices\n");
     goto cleanup;
   }
 
   for (uint32_t i = 0; i < devices_count; i++) {
     char* devname = devices[i].properties.deviceName;
     if (devices[i].compute_queue_family < 0) {
-      fprintf(stderr, "skipping device: %s (compute queue family not found)\n", devname);
+      eprintf("skipping device: %s (compute queue family not found)\n", devname);
       continue;
     }
 
     printf("running tests on device: %s\n", devname);
     err = test_device(devices[i]);
     if (err) {
-      fprintf(stderr, "failed on device: %s\n", devname);
+      eprintf("failed on device: %s\n", devname);
       goto cleanup;
     }
   }

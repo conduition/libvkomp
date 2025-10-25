@@ -10,8 +10,10 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
 void init_test() {
   // Color all test binary output
-  fprintf(stdout, "%s", ANSI_COLOR_CYAN);
-  fprintf(stderr, "%s", ANSI_COLOR_YELLOW);
+  printf("%s", ANSI_COLOR_CYAN);
+  eprintf("%s", ANSI_COLOR_YELLOW);
 }
