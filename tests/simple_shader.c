@@ -7,7 +7,7 @@
 #define ERR_NO_USABLE_DEVICE 10002
 #define ERR_INVALID_OUTPUT 10003
 #define N_THREADS 100
-#define WORK_GROUP_SIZE 16
+#define WORK_GROUP_SIZE 32
 
 int main() {
   init_test();
@@ -54,7 +54,7 @@ int main() {
   // Create a host-visible compute buffer
   err = vkomp_buffer_init(
     ctx,
-    N_THREADS * sizeof(uint32_t),
+    (N_THREADS + 1) * sizeof(uint32_t),
     VKOMP_BUFFER_TYPE_HOST,
     &compbuf
   );
@@ -71,18 +71,13 @@ int main() {
     fprintf(stderr, "error mapping VkompBuffer\n");
     goto cleanup;
   }
+  mapped_words[0] = N_THREADS;
   for (uint32_t i = 0; i < N_THREADS; i++) {
-    mapped_words[i] = i + 1;
+    mapped_words[i + 1] = i + 1;
   }
   vkomp_buffer_unmap(ctx, compbuf);
   mapped_words = NULL;
   printf("wrote input data to buffer\n");
-
-  const uint32_t push_constants[] = { N_THREADS };
-
-  uint32_t work_group_size = WORK_GROUP_SIZE;
-  const void* const specialization_constants[] = { &work_group_size };
-  const size_t specialization_constants_sizes[] = { sizeof(uint32_t) };
 
   VkompFlowStage stages[] = {
     {
@@ -91,15 +86,9 @@ int main() {
       .shader_spv = square_spv,
       .shader_spv_len = square_spv_len,
       .work_group_count = (N_THREADS + WORK_GROUP_SIZE - 1) / WORK_GROUP_SIZE,
-      .push_constants = (const void*) push_constants,
-      .push_constants_size = sizeof(push_constants),
-      .specialization_constants = specialization_constants,
-      .specialization_constants_sizes = specialization_constants_sizes,
-      .specialization_constants_len = sizeof(specialization_constants) / sizeof(void*),
     }
   };
   uint32_t stages_len = sizeof(stages) / sizeof(VkompFlowStage);
-
 
   err = vkomp_flow_init(ctx, stages, stages_len, &flow);
   if (err) {
@@ -121,13 +110,14 @@ int main() {
     goto cleanup;
   }
 
-  for (uint32_t i = 0; i < N_THREADS; i++) {
-    if (mapped_words[i] != (i + 1) * (i + 1)) {
+  for (uint32_t i = 1; i < N_THREADS + 1; i++) {
+    if (mapped_words[i] != i * i) {
       err = ERR_INVALID_OUTPUT;
       fprintf(stderr, "found invalid square shader output: %u^2 != %u\n", i, mapped_words[i]);
       goto cleanup;
     }
   }
+  printf("output is correct\n");
 
   vkomp_buffer_unmap(ctx, compbuf);
   mapped_words = NULL;
