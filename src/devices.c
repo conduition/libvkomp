@@ -40,6 +40,8 @@ int vkomp_find_best_device(VkompDeviceInfo* devices, uint32_t devices_len) {
   uint32_t best_max_memory = 0;
   int best_device_idx = -1;
   for (int i = 0; i < (int) devices_len; i++) {
+    if (devices[i].compute_queue_family < 0)
+      continue;
     if (devices[i].properties.limits.maxComputeSharedMemorySize > best_max_memory) {
       best_max_memory = devices[i].properties.limits.maxComputeSharedMemorySize;
       best_device_idx = i;

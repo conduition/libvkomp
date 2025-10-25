@@ -45,7 +45,13 @@ int main() {
     goto cleanup;
   }
 
-  err = vkomp_context_init(devices[0], &ctx);
+  int best_device_idx = vkomp_find_best_device(devices, devices_count);
+  if (best_device_idx < 0) {
+    fprintf(stderr, "no vulkan compute devices available\n");
+    goto cleanup;
+  }
+
+  err = vkomp_context_init(devices[best_device_idx], &ctx);
   if (err) {
     fprintf(stderr, "error initializing VkompContext\n");
     goto cleanup;
