@@ -8,11 +8,21 @@ layout(constant_id = 0) const uint WORK_GROUP_SIZE = 64;
 layout(local_size_x_id = 0) in;
 
 layout(binding = 0) buffer myinputs {
+  // Outputs to confirm the WG size was correctly set inside the shader.
+  uint wgsize;
+  uint nlen;
+
   uint numbers[];
 };
 
 void main() {
   uint thread_id = gl_GlobalInvocationID.x;
   if (thread_id >= numbers_len) return;
+
+  if (thread_id == 0) {
+    nlen = numbers_len;
+    wgsize = WORK_GROUP_SIZE;
+  }
+
   numbers[thread_id] *= numbers[thread_id];
 }

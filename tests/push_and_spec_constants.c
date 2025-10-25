@@ -60,7 +60,7 @@ int main() {
   // Create a host-visible compute buffer
   err = vkomp_buffer_init(
     ctx,
-    N_THREADS * sizeof(uint32_t),
+    (N_THREADS + 2) * sizeof(uint32_t),
     VKOMP_BUFFER_TYPE_HOST,
     &compbuf
   );
@@ -78,7 +78,7 @@ int main() {
     goto cleanup;
   }
   for (uint32_t i = 0; i < N_THREADS; i++) {
-    mapped_words[i] = i + 1;
+    mapped_words[i + 2] = i + 1;
   }
   vkomp_buffer_unmap(ctx, compbuf);
   mapped_words = NULL;
@@ -106,7 +106,6 @@ int main() {
   };
   uint32_t stages_len = sizeof(stages) / sizeof(VkompFlowStage);
 
-
   err = vkomp_flow_init(ctx, stages, stages_len, &flow);
   if (err) {
     eprintf("error initializing VkompFlow\n");
@@ -127,8 +126,26 @@ int main() {
     goto cleanup;
   }
 
+  if (mapped_words[0] != WORK_GROUP_SIZE) {
+    eprintf(
+      "found incorrect workgroup size in output: %u != %u\n",
+      mapped_words[0],
+      WORK_GROUP_SIZE
+    );
+    goto cleanup;
+  }
+
+  if (mapped_words[1] != N_THREADS) {
+    eprintf(
+      "found incorrect thread count in output: %u != %u\n",
+      mapped_words[1],
+      N_THREADS
+    );
+    goto cleanup;
+  }
+
   for (uint32_t i = 0; i < N_THREADS; i++) {
-    if (mapped_words[i] != (i + 1) * (i + 1)) {
+    if (mapped_words[i + 2] != (i + 1) * (i + 1)) {
       err = ERR_INVALID_OUTPUT;
       eprintf("found invalid square shader output: %u^2 != %u\n", i, mapped_words[i]);
       goto cleanup;
