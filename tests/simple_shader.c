@@ -9,43 +9,13 @@
 #define N_THREADS 100
 #define WORK_GROUP_SIZE 32
 
-int main() {
-  init_test();
-
+int test_device(VkompDeviceInfo device) {
   // Resources to be freed at cleanup. Initialized to zero to avoid UB.
-  VkInstance       instance = NULL;
-  VkompDeviceInfo* devices  = NULL;
   VkompContext     ctx      = {0};
   VkompFlow        flow     = {0};
   VkompBuffer      compbuf  = {0};
 
-  VkInstanceCreateInfo create_info = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-  int err = vkCreateInstance(&create_info, NULL, &instance);
-  if (err) {
-    fprintf(stderr, "error creating vulkan instance\n");
-    return err;
-  }
-
-  uint32_t devices_count;
-  err = vkomp_devices_count(instance, &devices_count);
-  if (err) {
-    fprintf(stderr, "error counting vulkan devices\n");
-    goto cleanup;
-  }
-
-  if (devices_count == 0) {
-    fprintf(stderr, "no vulkan devices found\n");
-    goto cleanup;
-  }
-
-  devices = malloc(devices_count * sizeof(VkompDeviceInfo));
-  err = vkomp_devices_enumerate(instance, devices_count, devices);
-  if (err) {
-    fprintf(stderr, "error enumerating vulkan devices\n");
-    goto cleanup;
-  }
-
-  err = vkomp_context_init(devices[0], &ctx);
+  int err = vkomp_context_init(device, &ctx);
   if (err) {
     fprintf(stderr, "error initializing VkompContext\n");
     goto cleanup;
@@ -122,11 +92,62 @@ int main() {
   vkomp_buffer_unmap(ctx, compbuf);
   mapped_words = NULL;
 
-
 cleanup:
   vkomp_flow_free(ctx, flow);
   vkomp_buffer_free(ctx, compbuf);
   vkomp_context_free(ctx);
+  return err;
+}
+
+int main() {
+  init_test();
+
+  // Resources to be freed at cleanup. Initialized to zero to avoid UB.
+  VkInstance       instance = NULL;
+  VkompDeviceInfo* devices  = NULL;
+
+  VkInstanceCreateInfo create_info = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+  int err = vkCreateInstance(&create_info, NULL, &instance);
+  if (err) {
+    fprintf(stderr, "error creating vulkan instance\n");
+    return err;
+  }
+
+  uint32_t devices_count;
+  err = vkomp_devices_count(instance, &devices_count);
+  if (err) {
+    fprintf(stderr, "error counting vulkan devices\n");
+    goto cleanup;
+  }
+
+  if (devices_count == 0) {
+    fprintf(stderr, "no vulkan devices found\n");
+    goto cleanup;
+  }
+
+  devices = malloc(devices_count * sizeof(VkompDeviceInfo));
+  err = vkomp_devices_enumerate(instance, devices_count, devices);
+  if (err) {
+    fprintf(stderr, "error enumerating vulkan devices\n");
+    goto cleanup;
+  }
+
+  for (uint32_t i = 0; i < devices_count; i++) {
+    char* devname = devices[i].properties.deviceName;
+    if (devices[i].compute_queue_family < 0) {
+      fprintf(stderr, "skipping device: %s (compute queue family not found)\n", devname);
+      continue;
+    }
+
+    printf("running tests on device: %s\n", devname);
+    err = test_device(devices[i]);
+    if (err) {
+      fprintf(stderr, "failed on device: %s\n", devname);
+      goto cleanup;
+    }
+  }
+
+cleanup:
   free(devices);
   vkDestroyInstance(instance, NULL);
   return err;
