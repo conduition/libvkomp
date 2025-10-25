@@ -14,13 +14,16 @@ SHADERS    := $(wildcard shaders/*.comp)
 SPV        := $(SHADERS:.comp=.spv)
 SHADER_HDR := $(SPV:.spv=.h)
 
-$(TEST_RUNNER): $(TEST_RUNNER).c $(TESTS) $(HDR)
+DEPS := ../lib/libvkomp.a ../include/vkomp.h
+
+$(TEST_RUNNER): $(TEST_RUNNER).c $(TESTS) $(HDR) $(DEPS)
 	$(CC) $(CFLAGS) -o $@ $<
 
+.PHONY: run
 run: $(TEST_RUNNER) $(TESTS)
 	./$(TEST_RUNNER)
 
-%.test: %.c $(SHADER_HDR) $(HDR)
+%.test: %.c $(SHADER_HDR) $(HDR) $(DEPS)
 	$(CC) $(CFLAGS) -o $@ $< -L../lib -lvkomp -lvulkan
 
 %.spv: %.comp
