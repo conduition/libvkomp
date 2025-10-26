@@ -55,6 +55,28 @@ int vkomp_find_best_device(VkompDeviceInfo* devices, uint32_t devices_len) {
 }
 
 
+int vkomp_get_best_device(VkInstance instance, VkompDeviceInfo* device) {
+  uint32_t device_count;
+  int err = vkomp_devices_count(instance, &device_count);
+  if (err) return err;
+
+  VkompDeviceInfo* devices = malloc(device_count * sizeof(VkompDeviceInfo));
+  err = vkomp_devices_enumerate(instance, &device_count, devices);
+  if (err) goto cleanup;
+
+  int best_device = vkomp_find_best_device(devices, device_count);
+  if (best_device < 0) {
+    err = VKOMP_ERROR_DEVICE_NOT_FOUND;
+    goto cleanup;
+  }
+
+  *device = devices[best_device];
+
+cleanup:
+  free(devices);
+  return err;
+}
+
 int vkomp_get_best_gpu(VkInstance instance, VkompDeviceInfo* device) {
   uint32_t device_count;
   int err = vkomp_devices_count(instance, &device_count);

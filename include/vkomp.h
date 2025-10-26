@@ -27,6 +27,11 @@ int vkomp_devices_enumerate(
 // only a rough guess. Returns -1 if devices_len is zero.
 int vkomp_find_best_device(VkompDeviceInfo* devices, uint32_t devices_len);
 
+// Enumerate all devices and find the best usable compute devices (using compute
+// memory as a metric). A useful shortcut for those in a hurry to get any device or
+// find the best available GPU.
+int vkomp_get_best_device(VkInstance instance, VkompDeviceInfo* device);
+int vkomp_get_best_gpu(VkInstance instance, VkompDeviceInfo* device);
 
 // A context which encapsulates the runtime state of libvkomp.
 typedef struct {
