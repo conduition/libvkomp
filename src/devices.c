@@ -78,9 +78,12 @@ int vkomp_get_best_gpu(VkInstance instance, VkompDeviceInfo* device) {
   }
 
   int best_gpu = vkomp_find_best_device(devices, gpu_count);
-  if (best_gpu >= 0) {
-    *device = devices[best_gpu];
+  if (best_gpu < 0) {
+    err = VKOMP_ERROR_DEVICE_NOT_FOUND;
+    goto cleanup;
   }
+
+  *device = devices[best_gpu];
 
 cleanup:
   free(devices);

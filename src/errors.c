@@ -100,6 +100,10 @@ const char* vkomp_stringify_error_code(int code) {
       return "VKOMP_ERROR_INVALID_BUFFER_TYPE";
     case VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND:
       return "VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND";
+    case VKOMP_ERROR_DEVICE_NOT_FOUND:
+      return "VKOMP_ERROR_DEVICE_NOT_FOUND";
+    case VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE:
+      return "VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE";
 
     default:
       return "UnknownError";

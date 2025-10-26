@@ -154,4 +154,10 @@ typedef enum VkompError {
 
   // Indicates we cannot find the requested memory type (host-visible, device local, etc).
   VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND = 33,
+
+  // Indicates Vkomp could not fetch a requested device.
+  VKOMP_ERROR_DEVICE_NOT_FOUND = 34,
+
+  // The user tried to map a buffer which is not host-visible.
+  VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE = 35,
 } VkompError;

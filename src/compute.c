@@ -105,6 +105,10 @@ int vkomp_buffer_init(
 }
 
 int vkomp_buffer_map(VkompContext ctx, VkompBuffer compbuf, void** mapped) {
+  if (!compbuf.is_host_visible) {
+    return VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE;
+  }
+
   return vkMapMemory(
     ctx.device,
     compbuf.memory,
