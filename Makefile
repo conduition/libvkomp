@@ -20,3 +20,4 @@ test: lib/libvkomp.a
 .PHONY: clean
 clean:
 	rm -f $(OBJ) lib/libvkomp.a
+	make -C tests clean
