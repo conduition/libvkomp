@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "vkomp.h"
 
-int vulkan_find_compute_queue_family(VkPhysicalDevice dev_phy) {
+int _vkomp_intern_find_compute_queue_family(VkPhysicalDevice dev_phy) {
   uint32_t queue_family_count = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(dev_phy, &queue_family_count, NULL);
   VkQueueFamilyProperties* queue_families = malloc(queue_family_count * sizeof(VkQueueFamilyProperties));
@@ -44,7 +44,7 @@ static int vulkan_find_memory_type_index(
   return VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND;
 }
 
-int vulkan_setup_buffer(
+int _vkomp_intern_setup_buffer(
   VkDevice device,
   size_t size,
   VkBuffer* buffer
@@ -61,7 +61,7 @@ int vulkan_setup_buffer(
 }
 
 
-int vulkan_alloc_buffer_memory(
+int _vkomp_intern_alloc_buffer_memory(
   VkDevice device,
   VkPhysicalDevice dev_phy,
   VkBuffer buffer,
@@ -99,7 +99,7 @@ int vulkan_alloc_buffer_memory(
 }
 
 
-int vulkan_setup_descriptor_layout(
+int _vkomp_intern_setup_descriptor_layout(
   VkDevice device,
   uint32_t binding_count,
   VkDescriptorSetLayout* descriptor_set_layout
@@ -133,7 +133,7 @@ int vulkan_setup_descriptor_layout(
 }
 
 
-int vulkan_setup_shader_module(
+int _vkomp_intern_setup_shader_module(
   VkDevice device,
   const uint8_t* shader_spv,
   size_t shader_spv_len,
@@ -148,7 +148,7 @@ int vulkan_setup_shader_module(
 }
 
 
-int vulkan_setup_pipeline_layout(
+int _vkomp_intern_setup_pipeline_layout(
   VkDevice device,
   VkDescriptorSetLayout descriptor_set_layout,
   size_t push_constants_size,
@@ -170,7 +170,7 @@ int vulkan_setup_pipeline_layout(
   return vkCreatePipelineLayout(device, &pipeline_layout_create_info, NULL, pipeline_layout);
 }
 
-void vulkan_setup_specialization_info(
+void _vkomp_intern_setup_specialization_info(
   const void* const* specialization_constants,
   const size_t* specialization_constants_sizes,
   uint32_t specialization_constants_len,
@@ -207,7 +207,7 @@ void vulkan_setup_specialization_info(
   spec_info->pData = (void*) spec_const_data;
 }
 
-void vulkan_free_specialization_info(VkSpecializationInfo* spec_info) {
+void _vkomp_intern_free_specialization_info(VkSpecializationInfo* spec_info) {
   if (spec_info != NULL) {
     free((void*) spec_info->pData);
     free((void*) spec_info->pMapEntries);
@@ -216,7 +216,7 @@ void vulkan_free_specialization_info(VkSpecializationInfo* spec_info) {
   }
 }
 
-int vulkan_setup_pipeline(
+int _vkomp_intern_setup_pipeline(
   VkDevice device,
   VkShaderModule shader,
   VkPipelineLayout pipeline_layout,
@@ -245,7 +245,7 @@ int vulkan_setup_pipeline(
   );
 }
 
-int vulkan_setup_command_buffer(
+int _vkomp_intern_setup_command_buffer(
   VkDevice device,
   VkCommandPool cmd_pool,
   VkCommandBuffer* cmd_buf
@@ -260,7 +260,7 @@ int vulkan_setup_command_buffer(
 }
 
 
-int vulkan_setup_descriptor_set(
+int _vkomp_intern_setup_descriptor_set(
   VkDevice device,
   VkDescriptorPool descriptor_pool,
   VkDescriptorSetLayout descriptor_set_layout,
@@ -276,7 +276,7 @@ int vulkan_setup_descriptor_set(
 }
 
 
-int vulkan_setup_event(VkDevice device, VkEvent* event) {
+int _vkomp_intern_setup_event(VkDevice device, VkEvent* event) {
   VkEventCreateInfo event_create_info = {
     .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
     .flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT, // only the device uses the event
@@ -285,7 +285,7 @@ int vulkan_setup_event(VkDevice device, VkEvent* event) {
 }
 
 
-int vulkan_setup_descriptor_pool(
+int _vkomp_intern_setup_descriptor_pool(
   VkDevice device,
   uint32_t descriptor_count,
   uint32_t descriptor_sets_count,
@@ -313,7 +313,7 @@ int vulkan_setup_descriptor_pool(
 
 
 // Connect a storage buffer with the descriptor.
-void vulkan_bind_buffer_to_descriptor(
+void _vkomp_intern_bind_buffer_to_descriptor(
   VkDevice device,
   VkBuffer buffer,
   size_t buffer_size,
@@ -344,7 +344,7 @@ void vulkan_bind_buffer_to_descriptor(
 }
 
 
-int vulkan_write_command_buffer(
+int _vkomp_intern_write_command_buffer(
   VkCommandBuffer cmd_buf,
   VkPipeline pipeline,
   VkPipelineLayout pipeline_layout,

@@ -26,7 +26,7 @@ int vkomp_devices_enumerate(
     devices[i] = (VkompDeviceInfo) {
       .properties = device_props,
       .dev_phy = physical_devices[i],
-      .compute_queue_family = vulkan_find_compute_queue_family(physical_devices[i]),
+      .compute_queue_family = _vkomp_intern_find_compute_queue_family(physical_devices[i]),
     };
   }
 
