@@ -8,7 +8,7 @@
 #define ERR_NO_USABLE_DEVICE 50
 #define ERR_INVALID_OUTPUT 51
 
-#define N_THREADS (1 << 20)
+#define N_THREADS 2000000
 #define WORK_GROUP_SIZE 32
 #define OUTPUT_WORDS 8
 #define OUTPUT_BYTES (OUTPUT_WORDS * sizeof(uint32_t))
@@ -99,12 +99,21 @@ int test_device(VkompDeviceInfo device) {
   }
   printf("initialized the compute flow\n");
 
+  Time start, shader_done, copy_done;
+
+  get_time(&start);
   err = vkomp_flow_run(ctx, flow);
   if (err) {
     eprintf("error running VkompFlow\n");
     goto cleanup;
   }
-  printf("executed shader\n");
+
+  get_time(&shader_done);
+  printf(
+    "executed shader in %.2f ms (%.2f ns/hash)\n",
+    time_delta_ms(start, shader_done),
+    (double) time_delta_ns(start, shader_done) / N_THREADS
+  );
 
   // Copy the shader output back to CPU memory
   uint8_t* mapped = NULL;
@@ -117,6 +126,14 @@ int test_device(VkompDeviceInfo device) {
   memcpy(output_data, mapped, output_buf_ptr->size);
   vkomp_buffer_unmap(ctx, *output_buf_ptr);
   mapped = NULL;
+  get_time(&copy_done);
+
+  printf(
+    "copied shader output (%.2f MiB) to CPU in %.2f ms (%.2f ns/hash)\n",
+    (double) (N_THREADS * OUTPUT_BYTES) / 1024.0 / 1024.0,
+    time_delta_ms(shader_done, copy_done),
+    (double) time_delta_ns(shader_done, copy_done) / (double) N_THREADS
+  );
 
   printf("shader output:\n");
   for (uint32_t i = 0; i < 4; i++) {
