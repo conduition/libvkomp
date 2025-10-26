@@ -11,3 +11,7 @@ shader.h: shader.spv
 
 shader.spv: shader.comp
 	$(GLSLC) --target-env vulkan1.2 -DWORK_GROUP_COUNT=$(WORK_GROUP_COUNT) -o shader.spv shader.comp
+
+.PHONY: clean
+clean:
+	rm -f example shader.spv shader.h
