@@ -191,7 +191,7 @@ int main() {
   }
 
   devices = malloc(devices_count * sizeof(VkompDeviceInfo));
-  err = vkomp_devices_enumerate(instance, devices_count, devices);
+  err = vkomp_devices_enumerate(instance, &devices_count, devices);
   if (err) {
     eprintf("error enumerating vulkan devices\n");
     goto cleanup;
@@ -199,11 +199,6 @@ int main() {
 
   for (uint32_t i = 0; i < devices_count; i++) {
     char* devname = devices[i].properties.deviceName;
-    if (devices[i].compute_queue_family < 0) {
-      eprintf("skipping device: %s (compute queue family not found)\n", devname);
-      continue;
-    }
-
     printf("running tests on device: %s\n", devname);
     err = test_device(devices[i]);
     if (err) {

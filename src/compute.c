@@ -12,9 +12,6 @@ void vkomp_context_free(VkompContext ctx) {
 }
 
 int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx) {
-  if (device_info.compute_queue_family < 0)
-    return VKOMP_ERROR_DEVICE_CANNOT_COMPUTE;
-
   // Create the logical device handle
   VkDeviceQueueCreateInfo queue_create_info = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,

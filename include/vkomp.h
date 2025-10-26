@@ -2,23 +2,23 @@
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
 
-// Represents a vulkan device. Note that not all devices support compute shaders.
-// Check that `VkompDeviceInfo::compute_queue_family >= 0` before attempting to use
-// a device. Creating a `VkompContext` using a device which doesn't support compute
-// shaders will return an error.
+// Represents a vulkan device that supports compute shaders.
 typedef struct {
   VkPhysicalDeviceProperties properties;
   VkPhysicalDevice           dev_phy;
-  int                        compute_queue_family;
+  uint32_t                   compute_queue_family;
 } VkompDeviceInfo;
 
 // Count the total number of vulkan devices.
 int vkomp_devices_count(VkInstance instance, uint32_t* device_count);
 // Enumerate all vulkan devices. The `devices` array must have enough space for
-// at least `devices_count` device info structures.
+// at least `devices_count` device info structures. On success, `device_count` will
+// be overwritten with the actual number of written devices, which may be less than
+// the value returned by `vkomp_devices_count` as some devices might not support
+// compute shaders.
 int vkomp_devices_enumerate(
   VkInstance instance,
-  uint32_t device_count,
+  uint32_t* device_count,
   VkompDeviceInfo* devices
 );
 // Find the "best" device of a set, using max compute memory
@@ -148,14 +148,10 @@ const char* vkomp_stringify_error_code(int code);
 // This error type extends the `VkResult` type. The error codes do not conflict with
 // Vulkan's, and are also small enough to fit in an 8-bit unix process exit code.
 typedef enum VkompError {
-  // Indicates the caller tried to initialize a `VkompContext` using a device
-  // with no valid compute queue family.
-  VKOMP_ERROR_DEVICE_CANNOT_COMPUTE = 32,
-
   // Indicates the caller passed an unknown value for `VkompBufferType`, which
   // is not an enum member.
-  VKOMP_ERROR_INVALID_BUFFER_TYPE = 33,
+  VKOMP_ERROR_INVALID_BUFFER_TYPE = 32,
 
   // Indicates we cannot find the requested memory type (host-visible, device local, etc).
-  VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND = 34,
+  VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND = 33,
 } VkompError;

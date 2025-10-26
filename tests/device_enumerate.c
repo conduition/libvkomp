@@ -26,7 +26,7 @@ int main() {
   }
 
   devices = malloc(devices_count * sizeof(VkompDeviceInfo));
-  err = vkomp_devices_enumerate(instance, devices_count, devices);
+  err = vkomp_devices_enumerate(instance, &devices_count, devices);
   if (err) {
     eprintf("failed to enumerate vulkan devices\n");
     goto cleanup;
