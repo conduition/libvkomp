@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "utils.h"
-#include "errors.h"
+#include "vkomp.h"
 
 int vulkan_find_compute_queue_family(VkPhysicalDevice dev_phy) {
   uint32_t queue_family_count = 0;

@@ -1,6 +1,6 @@
 #include <vulkan/vulkan.h>
 
-#include "errors.h"
+#include "vkomp.h"
 
 const char* vkomp_stringify_error_code(int code) {
   switch (code) {

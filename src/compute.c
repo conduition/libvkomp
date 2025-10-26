@@ -3,7 +3,6 @@
 
 #include "utils.h"
 #include "vkomp.h"
-#include "errors.h"
 
 #define MIN(a, b) (a < b ? a : b)
 
