@@ -7,8 +7,10 @@
 #define MIN(a, b) (a < b ? a : b)
 
 void vkomp_context_free(VkompContext ctx) {
-  vkDestroyCommandPool(ctx.device, ctx.cmd_pool, NULL);
-  vkDestroyDevice(ctx.device, NULL);
+  if (ctx.device != NULL) {
+    vkDestroyCommandPool(ctx.device, ctx.cmd_pool, NULL);
+    vkDestroyDevice(ctx.device, NULL);
+  }
 }
 
 int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx) {
@@ -50,8 +52,10 @@ int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx) {
 
 
 void vkomp_buffer_free(VkompContext ctx, VkompBuffer compbuf) {
-  vkFreeMemory(ctx.device, compbuf.memory, NULL);
-  vkDestroyBuffer(ctx.device, compbuf.buffer, NULL);
+  if (ctx.device != NULL) {
+    vkFreeMemory(ctx.device, compbuf.memory, NULL);
+    vkDestroyBuffer(ctx.device, compbuf.buffer, NULL);
+  }
 }
 
 int vkomp_buffer_init(
@@ -216,14 +220,16 @@ int vkomp_flow_stage_execution_resources_init(
 }
 
 void vkomp_flow_free(VkompContext ctx, VkompFlow flow) {
-  for (uint32_t i = 0; i < flow.stages_len; i++) {
-    vkomp_flow_stage_compiled_free(ctx.device, flow.stages_compiled[i]);
-    vkomp_flow_stage_execution_resources_free(ctx.device, flow.stages_resources[i]);
+  if (ctx.device != NULL) {
+    for (uint32_t i = 0; i < flow.stages_len; i++) {
+      vkomp_flow_stage_compiled_free(ctx.device, flow.stages_compiled[i]);
+      vkomp_flow_stage_execution_resources_free(ctx.device, flow.stages_resources[i]);
+    }
+    free(flow.stages_resources);
+    free(flow.stages_compiled);
+    free(flow.stages);
+    vkDestroyDescriptorPool(ctx.device, flow.descriptor_pool, NULL);
   }
-  free(flow.stages_resources);
-  free(flow.stages_compiled);
-  free(flow.stages);
-  vkDestroyDescriptorPool(ctx.device, flow.descriptor_pool, NULL);
 }
 
 int vkomp_flow_init(
