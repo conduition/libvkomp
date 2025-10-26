@@ -96,8 +96,6 @@ const char* vkomp_stringify_error_code(int code) {
       return "VK_TIMEOUT";
 
     // Vkomp errors
-    case VKOMP_ERROR_DEVICE_CANNOT_COMPUTE:
-      return "VKOMP_ERROR_DEVICE_CANNOT_COMPUTE";
     case VKOMP_ERROR_INVALID_BUFFER_TYPE:
       return "VKOMP_ERROR_INVALID_BUFFER_TYPE";
     case VKOMP_ERROR_MEMORY_TYPE_NOT_FOUND:
