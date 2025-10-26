@@ -15,8 +15,15 @@ int run_test(const char* executable, int* exit_status) {
   if (pid == -1)
     return -2;
 
+
   // Child
   if (pid == 0) {
+    #ifndef DEBUG
+      int fd[2];
+      pipe(fd);
+      dup2(fd[1], 1);
+    #endif
+
     char* argv[] = {NULL};
     execv(executable, argv);
     perror("execvp failed");

@@ -7,6 +7,11 @@ TESTS := $(SRC:.c=.test)
 CC     ?= cc
 CFLAGS += -O3 -Wall -Wextra -Werror=pedantic -Werror=vla -I../include
 
+# Print test debug info
+ifeq ($(DEBUG), 1)
+	CFLAGS += -DDEBUG=1
+endif
+
 GLSLC      ?= glslangValidator
 GLSLCFLAGS += --target-env vulkan1.2
 
