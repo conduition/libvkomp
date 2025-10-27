@@ -4,7 +4,6 @@
 #include "shaders/square_with_consts.h"
 #include "utils.h"
 
-#define ERR_NO_USABLE_DEVICE 50
 #define ERR_INVALID_OUTPUT 51
 #define N_THREADS 100
 #define WORK_GROUP_SIZE 16
@@ -14,7 +13,6 @@ int main() {
 
   // Resources to be freed at cleanup. Initialized to zero to avoid UB.
   VkInstance       instance = NULL;
-  VkompDeviceInfo* devices  = NULL;
   VkompContext     ctx      = {0};
   VkompFlow        flow     = {0};
   VkompBuffer      compbuf  = {0};
@@ -26,33 +24,14 @@ int main() {
     return err;
   }
 
-  uint32_t devices_count;
-  err = vkomp_devices_count(instance, &devices_count);
+  VkompDeviceInfo device;
+  err = vkomp_get_best_device(instance, &device);
   if (err) {
-    eprintf("error counting vulkan devices\n");
+    eprintf("error getting best vulkan device\n");
     goto cleanup;
   }
 
-  if (devices_count == 0) {
-    eprintf("no vulkan devices found\n");
-    err = ERR_NO_USABLE_DEVICE;
-    goto cleanup;
-  }
-
-  devices = malloc(devices_count * sizeof(VkompDeviceInfo));
-  err = vkomp_devices_enumerate(instance, &devices_count, devices);
-  if (err) {
-    eprintf("error enumerating vulkan devices\n");
-    goto cleanup;
-  }
-
-  int best_device_idx = vkomp_find_best_device(devices, devices_count);
-  if (best_device_idx < 0) {
-    eprintf("no vulkan compute devices available\n");
-    goto cleanup;
-  }
-
-  err = vkomp_context_init(devices[best_device_idx], &ctx);
+  err = vkomp_context_init(device, &ctx);
   if (err) {
     eprintf("error initializing VkompContext\n");
     goto cleanup;
@@ -148,7 +127,7 @@ int main() {
   for (uint32_t i = 0; i < N_THREADS; i++) {
     if (mapped_words[i + 2] != (i + 1) * (i + 1)) {
       err = ERR_INVALID_OUTPUT;
-      eprintf("found invalid square shader output: %u^2 != %u\n", i, mapped_words[i]);
+      eprintf("found invalid square shader output: %u^2 != %u\n", i + 1, mapped_words[i]);
       goto cleanup;
     }
   }
@@ -162,7 +141,6 @@ cleanup:
   vkomp_flow_free(ctx, flow);
   vkomp_buffer_free(ctx, compbuf);
   vkomp_context_free(ctx);
-  free(devices);
   vkDestroyInstance(instance, NULL);
   return err;
 }

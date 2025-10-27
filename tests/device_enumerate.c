@@ -4,8 +4,6 @@
 
 #include "utils.h"
 
-#define ERR_NO_USABLE_DEVICE 10002;
-
 int main() {
   init_test();
   VkInstance       instance = NULL;
@@ -34,7 +32,7 @@ int main() {
 
   int best_device_index = vkomp_find_best_device(devices, devices_count);
   if (best_device_index < 0) {
-    err = ERR_NO_USABLE_DEVICE;
+    err = VKOMP_ERROR_DEVICE_NOT_FOUND;
     eprintf("no vulkan devices available\n");
     goto cleanup;
   }
