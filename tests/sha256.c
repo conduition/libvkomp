@@ -13,6 +13,12 @@
 #define OUTPUT_WORDS 8
 #define OUTPUT_BYTES (OUTPUT_WORDS * sizeof(uint32_t))
 
+void hex_32b(const uint8_t* data, char* hex_str) {
+  for (int i = 0; i < 32; i++) {
+    sprintf(&hex_str[i*2], "%02x", data[i]);
+  }
+}
+
 int test_device(VkompDeviceInfo device) {
   // Resources to be freed at cleanup. Initialized to zero to avoid UB.
   VkompContext     ctx        = {0};
@@ -151,6 +157,29 @@ int test_device(VkompDeviceInfo device) {
       printf("%02x", output_data[i * OUTPUT_BYTES + j]);
     }
     printf("\n");
+  }
+
+  #define expected_hashes_len 5
+  struct {
+    int hash_offset;
+    char* expected;
+  } expected_hashes[expected_hashes_len] = {
+    {0, "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"},
+    {3, "0359f11c6e9e56e5e74792a708e1fe6ae2c23d1b3b1af44a56a6f3898136bdb6"},
+    {N_THREADS - 3, "dc82020d268797457f49eb89d30b29427123e2c763b3e53f8a685a2aa6e2f871"},
+    {N_THREADS - 2, "9502a5e1833d09ad4b885d241f012953a9522948f3c135e405ef3f9601d51711"},
+    {N_THREADS - 1, "91b0c38714940357c30f6d40d4a52e955e34ee1547c3a83b53d0cd9b1f26cc64"},
+  };
+
+  char hex_output[64] = {0};
+  for (int i = 0; i < expected_hashes_len; i++) {
+    int offset = expected_hashes[i].hash_offset * OUTPUT_BYTES;
+    hex_32b(&output_data[offset], hex_output);
+    if (strncmp(hex_output, expected_hashes[i].expected, 64) != 0) {
+      err = ERR_INVALID_OUTPUT;
+      eprintf("found incorrect output hash %d", expected_hashes[i].hash_offset);
+      goto cleanup;
+    }
   }
 
   free(output_data);
