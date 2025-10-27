@@ -94,19 +94,3 @@ void _vkomp_intern_bind_buffer_to_descriptor(
   uint32_t binding_index,
   VkDescriptorSet descriptor_set
 );
-
-int _vkomp_intern_write_command_buffer(
-  VkCommandBuffer cmd_buf,
-  VkPipeline pipeline,
-  VkPipelineLayout pipeline_layout,
-  VkDescriptorSet descriptor_set,
-  uint32_t work_group_count,
-  const void* push_constants,
-  size_t push_constants_size,
-  VkBuffer* copy_sources,
-  VkBuffer* copy_dests,
-  const size_t* copy_sizes,
-  uint32_t copy_ops_len,
-  const VkEvent* prev_event,
-  const VkEvent* done_event
-);

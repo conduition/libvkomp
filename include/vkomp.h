@@ -81,13 +81,20 @@ int vkomp_buffer_map(VkompContext ctx, VkompBuffer compbuf, void** mapped);
 void vkomp_buffer_unmap(VkompContext ctx, VkompBuffer compbuf);
 
 // A buffer-to-buffer copy operation. Used to move data between host (CPU)
-// and device (GPU) local memory regions.
+// and device (GPU) local memory regions. The copy will try to copy as much of
+// `src` into `dest` as it can without overflowing the length of `dest`.
+// If `before_shader` is false, the copy will be executed after the stage's
+// shader has run, but before the next compute flow stage begins.
+// If `before_shader` is true, the copy will be executed before the stages's
+// shader has run.
 typedef struct {
   VkompBuffer* src;
   VkompBuffer* dest;
+  bool         before_shader;
 } VkompBufferCopyOp;
 
-// A user-supplied structure describing a compute shader.
+// A user-supplied structure describing a compute shader, its buffers for I/O, and
+// extra options such as buffer-to-buffer copy operations or runtime constants.
 typedef struct {
   VkompBuffer*       compute_buffers;
   uint32_t           compute_buffers_len;

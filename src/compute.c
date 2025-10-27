@@ -294,36 +294,102 @@ int vkomp_flow_init(
 
   // Fill each stage's command buffers.
   for (uint32_t i = 0; i < stages_len; i++) {
-    uint32_t copy_ops_len = stages[i].copy_ops_len;
-    VkBuffer* copy_sources = malloc(copy_ops_len * sizeof(VkBuffer));
-    VkBuffer* copy_dests   = malloc(copy_ops_len * sizeof(VkBuffer));
-    size_t*   copy_sizes   = malloc(copy_ops_len * sizeof(size_t));
+    VkCommandBuffer cmd_buf = stages_resources[i].cmd_buf;
+    VkPipeline pipeline = stages_compiled[i].pipeline;
+    VkPipelineLayout pipeline_layout = stages_compiled[i].pipeline_layout;
+    VkDescriptorSet descriptor_set = stages_resources[i].descriptor_set;
 
-    for (uint32_t j = 0; j < copy_ops_len; j++) {
-      VkompBufferCopyOp copy_op = stages[i].copy_ops[j];
-      copy_sources[i] = copy_op.src->buffer;
-      copy_dests[i]   = copy_op.dest->buffer;
-      copy_sizes[i]   = MIN(copy_op.src->size, copy_op.dest->size);
+
+    // Write the commands to the command buffer.
+    VkCommandBufferBeginInfo begin_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    };
+    err = vkBeginCommandBuffer(cmd_buf, &begin_info);
+    if (err) goto cleanup;
+
+    // We need to bind a pipeline, AND a descriptor set before we dispatch.
+    // The validation layer will NOT give warnings if you forget these, so be very careful not to forget them.
+    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdBindDescriptorSets(
+      cmd_buf,
+      VK_PIPELINE_BIND_POINT_COMPUTE,
+      pipeline_layout,
+      0, // set number of first descriptor_set to be bound
+      1, // number of descriptor sets
+      &descriptor_set,
+      0,  // offset count
+      NULL // offsets array
+    );
+
+    // Bind push constants
+    if (stages[i].push_constants_size > 0) {
+      vkCmdPushConstants(
+        cmd_buf,
+        pipeline_layout,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        0, //  offset
+        stages[i].push_constants_size,
+        stages[i].push_constants
+      );
     }
 
-    err = _vkomp_intern_write_command_buffer(
-      stages_resources[i].cmd_buf,
-      stages_compiled[i].pipeline,
-      stages_compiled[i].pipeline_layout,
-      stages_resources[i].descriptor_set,
-      stages[i].work_group_count,
-      stages[i].push_constants,
-      stages[i].push_constants_size,
-      copy_sources,
-      copy_dests,
-      copy_sizes,
-      copy_ops_len,
-      (i > 0) ? &stages_resources[i - 1].done_event : NULL,
-      (i + 1 < stages_len) ? &stages_resources[i].done_event : NULL
+    if (i > 0) {
+      vkCmdWaitEvents(
+        cmd_buf,
+        1, // num events
+        &stages_resources[i - 1].done_event,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        0, NULL, 0, NULL, 0, NULL
+      );
+    }
+
+    // pre-shader copy ops.
+    for (uint32_t j = 0; j < stages[i].copy_ops_len; j++) {
+      VkompBufferCopyOp copy_op = stages[i].copy_ops[j];
+      if (copy_op.before_shader) {
+        VkBufferCopy regions = { .size = MIN(copy_op.src->size, copy_op.dest->size) };
+        vkCmdCopyBuffer(
+          cmd_buf,
+          copy_op.src->buffer,
+          copy_op.dest->buffer,
+          1, // region count
+          &regions // regions
+        );
+      }
+    }
+
+    // Dispatch the compute shader.
+    vkCmdDispatch(
+      cmd_buf,
+      stages[i].work_group_count, // X dimension workgroups
+      1,  // Y dimension workgroups
+      1   // Z dimension workgroups
     );
-    free(copy_sources);
-    free(copy_dests);
-    free(copy_sizes);
+
+    // post-shader copy ops.
+    for (uint32_t j = 0; j < stages[i].copy_ops_len; j++) {
+      VkompBufferCopyOp copy_op = stages[i].copy_ops[j];
+      if (!copy_op.before_shader) {
+        VkBufferCopy regions = { .size = MIN(copy_op.src->size, copy_op.dest->size) };
+        vkCmdCopyBuffer(
+          cmd_buf,
+          copy_op.src->buffer,
+          copy_op.dest->buffer,
+          1, // region count
+          &regions // regions
+        );
+      }
+    }
+
+    if (i + 1 < stages_len) {
+      vkCmdSetEvent(
+        cmd_buf,
+        stages_resources[i].done_event,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
+      );
+    }
+    err = vkEndCommandBuffer(cmd_buf);
     if (err) goto cleanup;
   }
 
