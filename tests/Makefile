@@ -1,6 +1,5 @@
 TEST_RUNNER := runner
 
-HDR   := $(wildcard *.h)
 SRC   := $(filter-out $(TEST_RUNNER).c,$(wildcard *.c))
 TESTS := $(SRC:.c=.test)
 
@@ -26,18 +25,21 @@ SHADER_HDR := $(SPV:.spv=.h)
 
 DEPS := ../lib/libvkomp.a ../include/vkomp.h
 
-$(TEST_RUNNER): $(TEST_RUNNER).c $(TESTS) $(HDR) $(DEPS)
+$(TEST_RUNNER): $(TEST_RUNNER).c
 	$(CC) $(CFLAGS) -o $@ $<
 
 .PHONY: run
 run: $(TEST_RUNNER) $(TESTS)
 	./$(TEST_RUNNER)
 
-%.test: %.c $(SHADER_HDR) $(HDR) $(DEPS)
+%.test: %.c $(SHADER_HDR) $(DEPS)
 	$(CC) $(CFLAGS) -o $@ $< -L../lib -lvkomp -lvulkan
 
 %.spv: %.comp
 	$(GLSLC) $(GLSLCFLAGS) -o $@ $<
+
+# tell make not to delete the shader headers.
+$(SHADER_HDR):
 
 shaders/%.h: shaders/%.spv
 	cd shaders && xxd -i $*.spv $*.h
