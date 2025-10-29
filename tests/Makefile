@@ -25,6 +25,9 @@ SHADER_HDR := $(SPV:.spv=.h)
 
 DEPS := ../lib/libvkomp.a ../include/vkomp.h
 
+.PHONY: all
+all: $(TEST_RUNNER) $(TESTS)
+
 $(TEST_RUNNER): $(TEST_RUNNER).c
 	$(CC) $(CFLAGS) -o $@ $<
 
