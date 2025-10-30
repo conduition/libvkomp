@@ -91,6 +91,9 @@ typedef struct {
   VkompBuffer* src;
   VkompBuffer* dest;
   bool         before_shader;
+  size_t       size;
+  size_t       src_offset;
+  size_t       dest_offset;
 } VkompBufferCopyOp;
 
 // A user-supplied structure describing a compute shader, its buffers for I/O, and
@@ -172,4 +175,7 @@ typedef enum VkompError {
 
   // The user tried to map a buffer which is not host-visible.
   VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE = 35,
+
+  // The user tried to copy between Vulkan buffers outside of their size bounds.
+  VKOMP_ERROR_COPY_OP_OUT_OF_BOUNDS = 36,
 } VkompError;

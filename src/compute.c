@@ -236,6 +236,38 @@ void vkomp_flow_free(VkompContext ctx, VkompFlow flow) {
   }
 }
 
+static int _vkomp_intern_write_copy_op(VkCommandBuffer cmd_buf, VkompBufferCopyOp copy_op) {
+  size_t copy_size = copy_op.size;
+  if (copy_size == 0) {
+    copy_size = MIN(
+      copy_op.src->size - copy_op.src_offset,
+      copy_op.dest->size - copy_op.dest_offset
+    );
+  }
+
+  if (
+    copy_op.src_offset + copy_size > copy_op.src->size ||
+    copy_op.dest_offset + copy_size > copy_op.dest->size
+  )
+    return VKOMP_ERROR_COPY_OP_OUT_OF_BOUNDS;
+
+
+  VkBufferCopy regions = {
+    .size = copy_size,
+    .srcOffset = copy_op.src_offset,
+    .dstOffset = copy_op.dest_offset,
+  };
+  vkCmdCopyBuffer(
+    cmd_buf,
+    copy_op.src->buffer,
+    copy_op.dest->buffer,
+    1, // region count
+    &regions // regions
+  );
+  return 0;
+}
+
+
 int vkomp_flow_init(
   VkompContext ctx,
   VkompFlowStage* stages,
@@ -348,14 +380,8 @@ int vkomp_flow_init(
     for (uint32_t j = 0; j < stages[i].copy_ops_len; j++) {
       VkompBufferCopyOp copy_op = stages[i].copy_ops[j];
       if (copy_op.before_shader) {
-        VkBufferCopy regions = { .size = MIN(copy_op.src->size, copy_op.dest->size) };
-        vkCmdCopyBuffer(
-          cmd_buf,
-          copy_op.src->buffer,
-          copy_op.dest->buffer,
-          1, // region count
-          &regions // regions
-        );
+        err = _vkomp_intern_write_copy_op(cmd_buf, copy_op);
+        if (err) goto cleanup;
       }
     }
 
@@ -371,14 +397,8 @@ int vkomp_flow_init(
     for (uint32_t j = 0; j < stages[i].copy_ops_len; j++) {
       VkompBufferCopyOp copy_op = stages[i].copy_ops[j];
       if (!copy_op.before_shader) {
-        VkBufferCopy regions = { .size = MIN(copy_op.src->size, copy_op.dest->size) };
-        vkCmdCopyBuffer(
-          cmd_buf,
-          copy_op.src->buffer,
-          copy_op.dest->buffer,
-          1, // region count
-          &regions // regions
-        );
+        err = _vkomp_intern_write_copy_op(cmd_buf, copy_op);
+        if (err) goto cleanup;
       }
     }
 

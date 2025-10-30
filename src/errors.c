@@ -104,6 +104,8 @@ const char* vkomp_stringify_error_code(int code) {
       return "VKOMP_ERROR_DEVICE_NOT_FOUND";
     case VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE:
       return "VKOMP_ERROR_BUFFER_NOT_HOST_VISIBLE";
+    case VKOMP_ERROR_COPY_OP_OUT_OF_BOUNDS:
+      return "VKOMP_ERROR_COPY_OP_OUT_OF_BOUNDS";
 
     default:
       return "UnknownError";
