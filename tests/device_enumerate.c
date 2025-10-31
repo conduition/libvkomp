@@ -9,7 +9,13 @@ int main() {
   VkInstance       instance = NULL;
   VkompDeviceInfo* devices  = NULL;
 
-  VkInstanceCreateInfo create_info = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+  VkApplicationInfo app_info = {
+    .apiVersion = VK_API_VERSION_1_1,
+  };
+  VkInstanceCreateInfo create_info = {
+    .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+    .pApplicationInfo = &app_info,
+  };
   int err = vkCreateInstance(&create_info, NULL, &instance);
   if (err) {
     eprintf("error creating vulkan instance\n");
@@ -39,9 +45,10 @@ int main() {
 
   for (int i = 0; i < (int) devices_count; i++) {
     printf(
-      "found device %u: %s%s\n",
+      "found device %u: %s warp_size=%u%s\n",
       i,
       devices[i].properties.deviceName,
+      devices[i].properties_vk11.subgroupSize,
       (i == best_device_index ? " (best)" : "")
     );
   }

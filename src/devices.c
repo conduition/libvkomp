@@ -24,11 +24,19 @@ int vkomp_devices_enumerate(
     int compute_queue_family = _vkomp_intern_find_compute_queue_family(physical_devices[i]);
     if (compute_queue_family < 0) continue;
 
-    VkPhysicalDeviceProperties device_props;
-    vkGetPhysicalDeviceProperties(physical_devices[i], &device_props);
+    VkPhysicalDeviceVulkan11Properties properties_vk11 = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES,
+    };
+    VkPhysicalDeviceProperties2 device_props = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+      .pNext = &properties_vk11,
+    };
+    vkGetPhysicalDeviceProperties2(physical_devices[i], &device_props);
+    device_props.pNext = NULL; // no dangling pointers
 
     devices[devices_written++] = (VkompDeviceInfo) {
-      .properties = device_props,
+      .properties = device_props.properties,
+      .properties_vk11 = properties_vk11,
       .dev_phy = physical_devices[i],
       .compute_queue_family = (uint32_t) compute_queue_family,
     };

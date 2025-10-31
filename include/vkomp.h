@@ -7,6 +7,8 @@ typedef struct {
   VkPhysicalDeviceProperties properties;
   VkPhysicalDevice           dev_phy;
   uint32_t                   compute_queue_family;
+  // set to zero unless the VkInstance was created with `apiVersion >= VK_API_VERSION_1_1`.
+  VkPhysicalDeviceVulkan11Properties properties_vk11;
 } VkompDeviceInfo;
 
 // Count the total number of vulkan devices.
