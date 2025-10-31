@@ -37,10 +37,9 @@ int vkomp_get_best_gpu(VkInstance instance, VkompDeviceInfo* device);
 
 // A context which encapsulates the runtime state of libvkomp.
 typedef struct {
-  VkPhysicalDevice dev_phy;
-  VkDevice         device;
-  uint32_t         queue_family_index;
-  VkCommandPool    cmd_pool;
+  VkDevice          device;
+  VkompDeviceInfo*  device_info;
+  VkCommandPool     cmd_pool;
 } VkompContext;
 
 void vkomp_context_free(VkompContext ctx);

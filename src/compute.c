@@ -10,6 +10,7 @@ void vkomp_context_free(VkompContext ctx) {
   if (ctx.device != NULL) {
     vkDestroyCommandPool(ctx.device, ctx.cmd_pool, NULL);
     vkDestroyDevice(ctx.device, NULL);
+    free(ctx.device_info);
   }
 }
 
@@ -42,10 +43,13 @@ int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx) {
     return err;
   }
 
-  ctx->dev_phy = device_info.dev_phy;
   ctx->device = device;
-  ctx->queue_family_index = device_info.compute_queue_family;
   ctx->cmd_pool = cmd_pool;
+
+  // The context is passed around a lot, we should probably not be
+  // copying this data around every time.
+  ctx->device_info = malloc(sizeof(VkompDeviceInfo));
+  *ctx->device_info = device_info;
 
   return 0;
 }
@@ -84,7 +88,7 @@ int vkomp_buffer_init(
   VkDeviceMemory memory;
   err = _vkomp_intern_alloc_buffer_memory(
     ctx.device,
-    ctx.dev_phy,
+    ctx.device_info->dev_phy,
     buffer,
     mem_flags,
     &actual_mem_properties,
@@ -440,7 +444,7 @@ int vkomp_flow_run(
   VkompFlow flow
 ) {
   VkQueue queue;
-  vkGetDeviceQueue(ctx.device, ctx.queue_family_index, 0, &queue);
+  vkGetDeviceQueue(ctx.device, ctx.device_info->compute_queue_family, 0, &queue);
 
   // We create a fence to await the final output.
   VkFenceCreateInfo fence_create_info = {
