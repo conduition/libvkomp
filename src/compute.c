@@ -16,10 +16,12 @@ void vkomp_context_free(VkompContext ctx) {
 
 int vkomp_context_init(VkompDeviceInfo device_info, VkompContext* ctx) {
   // Create the logical device handle
+  float priority = 1.0;
   VkDeviceQueueCreateInfo queue_create_info = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .queueFamilyIndex = device_info.compute_queue_family,
       .queueCount = 1,
+      .pQueuePriorities = &priority,
   };
   VkDeviceCreateInfo device_create_info = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
