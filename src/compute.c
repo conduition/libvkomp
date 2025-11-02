@@ -238,7 +238,6 @@ void vkomp_flow_free(VkompContext ctx, VkompFlow flow) {
       vkomp_flow_stage_execution_resources_free(ctx.device, flow.stages_resources[i]);
     }
     free(flow.stages_resources);
-    free(flow.stages);
     vkDestroyDescriptorPool(ctx.device, flow.descriptor_pool, NULL);
   }
 }
@@ -427,10 +426,6 @@ int vkomp_flow_init(
   flow->stages_len = stages_len;
   flow->stages_resources = stages_resources;
   flow->descriptor_pool = descriptor_pool;
-  flow->stages = malloc(stages_len * sizeof(VkompFlowStage));
-  for (uint32_t i = 0; i < stages_len; i++) {
-    flow->stages[i] = stages[i];
-  }
 
   return 0;
 

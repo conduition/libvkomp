@@ -132,7 +132,6 @@ typedef struct {
 // stage has completed.
 typedef struct {
   uint32_t                          stages_len;
-  VkompFlowStage*                   stages;
   VkompFlowStageExecutionResources* stages_resources;
   VkDescriptorPool                  descriptor_pool;
 } VkompFlow;
