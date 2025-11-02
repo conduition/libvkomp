@@ -146,6 +146,8 @@ int vkomp_flow_stage_execution_resources_init(
   VkDescriptorPool descriptor_pool,
   VkompFlowStageExecutionResources* resources
 ) {
+  int err;
+
   // To be freed if this function fails.
   VkShaderModule        shader                = NULL;
   VkDescriptorSetLayout descriptor_set_layout = NULL;
@@ -154,55 +156,57 @@ int vkomp_flow_stage_execution_resources_init(
   VkEvent               done_event            = NULL;
 
   // No need to free.
-  VkCommandBuffer cmd_buf;
-  VkDescriptorSet descriptor_set;
+  VkCommandBuffer cmd_buf = NULL;
+  VkDescriptorSet descriptor_set = NULL;
 
-  // Build the shader.
-  int err = _vkomp_intern_setup_shader_module(ctx.device, stage.shader_spv, stage.shader_spv_len, &shader);
-  if (err) return err;
+  // Build the shader and its related resources, but only if the stage has defined shader code.
+  if (stage.shader_spv_len > 0) {
+    err = _vkomp_intern_setup_shader_module(ctx.device, stage.shader_spv, stage.shader_spv_len, &shader);
+    if (err) return err;
 
-  // Create the descriptor set layout
-  err = _vkomp_intern_setup_descriptor_layout(ctx.device, stage.compute_buffers_len, &descriptor_set_layout);
-  if (err) goto cleanup;
+    // Create the descriptor set layout
+    err = _vkomp_intern_setup_descriptor_layout(ctx.device, stage.compute_buffers_len, &descriptor_set_layout);
+    if (err) goto cleanup;
 
-  // Create the pipeline layout
-  err = _vkomp_intern_setup_pipeline_layout(
-    ctx.device,
-    descriptor_set_layout,
-    stage.push_constants_size,
-    &pipeline_layout
-  );
-  if (err) goto cleanup;
-
-  // Create the specialization constants info
-  VkSpecializationInfo spec_info;
-  VkSpecializationInfo* spec_info_ptr = NULL;
-  if (stage.specialization_constants_len > 0) {
-    spec_info_ptr = &spec_info;
-    _vkomp_intern_setup_specialization_info(
-      stage.specialization_constants,
-      stage.specialization_constants_sizes,
-      stage.specialization_constants_len,
-      spec_info_ptr
+    // Create the pipeline layout
+    err = _vkomp_intern_setup_pipeline_layout(
+      ctx.device,
+      descriptor_set_layout,
+      stage.push_constants_size,
+      &pipeline_layout
     );
-  }
+    if (err) goto cleanup;
 
-  // Create the compute pipeline object.
-  err = _vkomp_intern_setup_pipeline(ctx.device, shader, pipeline_layout, spec_info_ptr, &pipeline);
-  _vkomp_intern_free_specialization_info(spec_info_ptr);
-  if (err) goto cleanup;
+    // Create the specialization constants info
+    VkSpecializationInfo spec_info;
+    VkSpecializationInfo* spec_info_ptr = NULL;
+    if (stage.specialization_constants_len > 0) {
+      spec_info_ptr = &spec_info;
+      _vkomp_intern_setup_specialization_info(
+        stage.specialization_constants,
+        stage.specialization_constants_sizes,
+        stage.specialization_constants_len,
+        spec_info_ptr
+      );
+    }
+
+    // Create the compute pipeline object.
+    err = _vkomp_intern_setup_pipeline(ctx.device, shader, pipeline_layout, spec_info_ptr, &pipeline);
+    _vkomp_intern_free_specialization_info(spec_info_ptr);
+    if (err) goto cleanup;
+
+    // Allocate a descriptor set from the descriptor pool
+    err = _vkomp_intern_setup_descriptor_set(
+      ctx.device,
+      descriptor_pool,
+      descriptor_set_layout,
+      &descriptor_set
+    );
+    if (err) goto cleanup;
+  }
 
   // Allocate a command buffer from the command pool.
   err = _vkomp_intern_setup_command_buffer(ctx.device, ctx.cmd_pool, &cmd_buf);
-  if (err) goto cleanup;
-
-  // Allocate a descriptor set from the descriptor pool
-  err = _vkomp_intern_setup_descriptor_set(
-    ctx.device,
-    descriptor_pool,
-    descriptor_set_layout,
-    &descriptor_set
-  );
   if (err) goto cleanup;
 
   // Create an event which marks this stage as done.
@@ -343,17 +347,19 @@ int vkomp_flow_init(
 
     // We need to bind a pipeline, AND a descriptor set before we dispatch.
     // The validation layer will NOT give warnings if you forget these, so be very careful not to forget them.
-    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-    vkCmdBindDescriptorSets(
-      cmd_buf,
-      VK_PIPELINE_BIND_POINT_COMPUTE,
-      pipeline_layout,
-      0, // set number of first descriptor_set to be bound
-      1, // number of descriptor sets
-      &descriptor_set,
-      0,  // offset count
-      NULL // offsets array
-    );
+    if (pipeline != NULL)  {
+      vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+      vkCmdBindDescriptorSets(
+        cmd_buf,
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        pipeline_layout,
+        0, // set number of first descriptor_set to be bound
+        1, // number of descriptor sets
+        &descriptor_set,
+        0,  // offset count
+        NULL // offsets array
+      );
+    }
 
     // Bind push constants
     if (stages[i].push_constants_size > 0) {
@@ -388,12 +394,14 @@ int vkomp_flow_init(
     }
 
     // Dispatch the compute shader.
-    vkCmdDispatch(
-      cmd_buf,
-      stages[i].work_group_count, // X dimension workgroups
-      1,  // Y dimension workgroups
-      1   // Z dimension workgroups
-    );
+    if (pipeline != NULL) {
+      vkCmdDispatch(
+        cmd_buf,
+        stages[i].work_group_count, // X dimension workgroups
+        1,  // Y dimension workgroups
+        1   // Z dimension workgroups
+      );
+    }
 
     // post-shader copy ops.
     for (uint32_t j = 0; j < stages[i].copy_ops_len; j++) {
