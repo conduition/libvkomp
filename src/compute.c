@@ -129,46 +129,50 @@ void vkomp_buffer_unmap(VkompContext ctx, VkompBuffer compbuf) {
   vkUnmapMemory(ctx.device, compbuf.memory);
 }
 
-void vkomp_flow_stage_compiled_free(VkDevice device, VkompFlowStageCompiled compiled) {
-  vkDestroyPipeline(device, compiled.pipeline, NULL);
-  vkDestroyPipelineLayout(device, compiled.pipeline_layout, NULL);
-  vkDestroyShaderModule(device, compiled.shader, NULL);
-  vkDestroyDescriptorSetLayout(device, compiled.descriptor_set_layout, NULL);
+void vkomp_flow_stage_execution_resources_free(
+  VkDevice device,
+  VkompFlowStageExecutionResources resources
+) {
+  vkDestroyPipeline(device, resources.pipeline, NULL);
+  vkDestroyPipelineLayout(device, resources.pipeline_layout, NULL);
+  vkDestroyShaderModule(device, resources.shader, NULL);
+  vkDestroyDescriptorSetLayout(device, resources.descriptor_set_layout, NULL);
+  vkDestroyEvent(device, resources.done_event, NULL);
 }
 
-int vkomp_flow_stage_compiled_init(
-  VkDevice device,
+int vkomp_flow_stage_execution_resources_init(
+  VkompContext ctx,
   VkompFlowStage stage,
-  VkompFlowStageCompiled* compiled
+  VkDescriptorPool descriptor_pool,
+  VkompFlowStageExecutionResources* resources
 ) {
-  // Create the shader modules.
-  VkShaderModule shader;
-  int err = _vkomp_intern_setup_shader_module(device, stage.shader_spv, stage.shader_spv_len, &shader);
+  // To be freed if this function fails.
+  VkShaderModule        shader                = NULL;
+  VkDescriptorSetLayout descriptor_set_layout = NULL;
+  VkPipelineLayout      pipeline_layout       = NULL;
+  VkPipeline            pipeline              = NULL;
+  VkEvent               done_event            = NULL;
+
+  // No need to free.
+  VkCommandBuffer cmd_buf;
+  VkDescriptorSet descriptor_set;
+
+  // Build the shader.
+  int err = _vkomp_intern_setup_shader_module(ctx.device, stage.shader_spv, stage.shader_spv_len, &shader);
   if (err) return err;
-  compiled->shader = shader;
 
   // Create the descriptor set layout
-  VkDescriptorSetLayout descriptor_set_layout;
-  err = _vkomp_intern_setup_descriptor_layout(device, stage.compute_buffers_len, &descriptor_set_layout);
-  if (err) {
-    vkomp_flow_stage_compiled_free(device, *compiled);
-    return err;
-  }
-  compiled->descriptor_set_layout = descriptor_set_layout;
+  err = _vkomp_intern_setup_descriptor_layout(ctx.device, stage.compute_buffers_len, &descriptor_set_layout);
+  if (err) goto cleanup;
 
   // Create the pipeline layout
-  VkPipelineLayout pipeline_layout;
   err = _vkomp_intern_setup_pipeline_layout(
-    device,
+    ctx.device,
     descriptor_set_layout,
     stage.push_constants_size,
     &pipeline_layout
   );
-  if (err) {
-    vkomp_flow_stage_compiled_free(device, *compiled);
-    return err;
-  }
-  compiled->pipeline_layout = pipeline_layout;
+  if (err) goto cleanup;
 
   // Create the specialization constants info
   VkSpecializationInfo spec_info;
@@ -184,59 +188,52 @@ int vkomp_flow_stage_compiled_init(
   }
 
   // Create the compute pipeline object.
-  VkPipeline pipeline;
-  err = _vkomp_intern_setup_pipeline(device, shader, pipeline_layout, spec_info_ptr, &pipeline);
+  err = _vkomp_intern_setup_pipeline(ctx.device, shader, pipeline_layout, spec_info_ptr, &pipeline);
   _vkomp_intern_free_specialization_info(spec_info_ptr);
-  if (err) {
-    vkomp_flow_stage_compiled_free(device, *compiled);
-    return err;
-  }
-  compiled->pipeline = pipeline;
+  if (err) goto cleanup;
 
-  return 0;
-}
-
-void vkomp_flow_stage_execution_resources_free(
-  VkDevice device,
-  VkompFlowStageExecutionResources resources
-) {
-  vkDestroyEvent(device, resources.done_event, NULL);
-}
-
-int vkomp_flow_stage_execution_resources_init(
-  VkompContext ctx,
-  VkompFlowStageCompiled compiled,
-  VkDescriptorPool descriptor_pool,
-  VkompFlowStageExecutionResources* resources
-) {
   // Allocate a command buffer from the command pool.
-  int err = _vkomp_intern_setup_command_buffer(ctx.device, ctx.cmd_pool, &resources->cmd_buf);
-  if (err) return err;
+  err = _vkomp_intern_setup_command_buffer(ctx.device, ctx.cmd_pool, &cmd_buf);
+  if (err) goto cleanup;
 
   // Allocate a descriptor set from the descriptor pool
   err = _vkomp_intern_setup_descriptor_set(
     ctx.device,
     descriptor_pool,
-    compiled.descriptor_set_layout,
-    &resources->descriptor_set
+    descriptor_set_layout,
+    &descriptor_set
   );
-  if (err) return err;
+  if (err) goto cleanup;
 
   // Create an event which marks this stage as done.
-  err = _vkomp_intern_setup_event(ctx.device, &resources->done_event);
-  if (err) return err;
+  err = _vkomp_intern_setup_event(ctx.device, &done_event);
+  if (err) goto cleanup;
+
+  resources->pipeline = pipeline;
+  resources->pipeline_layout = pipeline_layout;
+  resources->shader = shader;
+  resources->descriptor_set_layout = descriptor_set_layout;
+  resources->descriptor_set = descriptor_set;
+  resources->done_event = done_event;
+  resources->cmd_buf = cmd_buf;
 
   return 0;
+
+cleanup:
+  vkDestroyPipeline(ctx.device, pipeline, NULL);
+  vkDestroyPipelineLayout(ctx.device, pipeline_layout, NULL);
+  vkDestroyShaderModule(ctx.device, shader, NULL);
+  vkDestroyDescriptorSetLayout(ctx.device, descriptor_set_layout, NULL);
+  vkDestroyEvent(ctx.device, done_event, NULL);
+  return err;
 }
 
 void vkomp_flow_free(VkompContext ctx, VkompFlow flow) {
   if (ctx.device != NULL) {
     for (uint32_t i = 0; i < flow.stages_len; i++) {
-      vkomp_flow_stage_compiled_free(ctx.device, flow.stages_compiled[i]);
       vkomp_flow_stage_execution_resources_free(ctx.device, flow.stages_resources[i]);
     }
     free(flow.stages_resources);
-    free(flow.stages_compiled);
     free(flow.stages);
     vkDestroyDescriptorPool(ctx.device, flow.descriptor_pool, NULL);
   }
@@ -280,35 +277,34 @@ int vkomp_flow_init(
   uint32_t stages_len,
   VkompFlow* flow
 ) {
-  int err;
-  uint32_t stages_compiled_counter = 0;
+  // To be freed on error
+  VkDescriptorPool descriptor_pool = NULL;
+
+  // Count how many descriptors we need and resources we have allocated.
   uint32_t stages_resources_counter = 0;
   uint32_t descriptor_count = 0;
-
-  VkompFlowStageCompiled* stages_compiled
-    = malloc(stages_len * sizeof(VkompFlowStageCompiled));
-
-  VkompFlowStageExecutionResources* stages_resources
-    = malloc(stages_len * sizeof(VkompFlowStageExecutionResources));
-
-  // Compile each stage of the compute shader flow
   for (uint32_t i = 0; i < stages_len; i++) {
-    err = vkomp_flow_stage_compiled_init(ctx.device, stages[i], &stages_compiled[i]);
-    if (err) goto cleanup;
-    stages_compiled_counter += 1;
     descriptor_count += stages[i].compute_buffers_len;
   }
 
   // Set up the descriptor pool
-  err = _vkomp_intern_setup_descriptor_pool(ctx.device, descriptor_count, stages_len, &flow->descriptor_pool);
-  if (err) goto cleanup;
+  int err = _vkomp_intern_setup_descriptor_pool(
+    ctx.device,
+    descriptor_count,
+    stages_len,
+    &descriptor_pool
+  );
+  if (err) return err;
 
-  // Allocate resources to run each of the flow stages.
+  VkompFlowStageExecutionResources* stages_resources
+    = malloc(stages_len * sizeof(VkompFlowStageExecutionResources));
+
+  // Compile, bind, and allocate resources for each stage of the compute shader flow.
   for (uint32_t i = 0; i < stages_len; i++) {
     err = vkomp_flow_stage_execution_resources_init(
       ctx,
-      stages_compiled[i],
-      flow->descriptor_pool,
+      stages[i],
+      descriptor_pool,
       &stages_resources[i]
     );
     if (err) goto cleanup;
@@ -332,10 +328,10 @@ int vkomp_flow_init(
 
   // Fill each stage's command buffers.
   for (uint32_t i = 0; i < stages_len; i++) {
-    VkCommandBuffer cmd_buf = stages_resources[i].cmd_buf;
-    VkPipeline pipeline = stages_compiled[i].pipeline;
-    VkPipelineLayout pipeline_layout = stages_compiled[i].pipeline_layout;
-    VkDescriptorSet descriptor_set = stages_resources[i].descriptor_set;
+    VkCommandBuffer  cmd_buf         = stages_resources[i].cmd_buf;
+    VkPipeline       pipeline        = stages_resources[i].pipeline;
+    VkPipelineLayout pipeline_layout = stages_resources[i].pipeline_layout;
+    VkDescriptorSet  descriptor_set  = stages_resources[i].descriptor_set;
 
 
     // Write the commands to the command buffer.
@@ -421,8 +417,8 @@ int vkomp_flow_init(
 
   // Finally initialize the flow struct.
   flow->stages_len = stages_len;
-  flow->stages_compiled = stages_compiled;
   flow->stages_resources = stages_resources;
+  flow->descriptor_pool = descriptor_pool;
   flow->stages = malloc(stages_len * sizeof(VkompFlowStage));
   for (uint32_t i = 0; i < stages_len; i++) {
     flow->stages[i] = stages[i];
@@ -431,13 +427,10 @@ int vkomp_flow_init(
   return 0;
 
 cleanup:
-  for (uint32_t i = 0; i < stages_compiled_counter; i++)
-    vkomp_flow_stage_compiled_free(ctx.device, stages_compiled[i]);
   for (uint32_t i = 0; i < stages_resources_counter; i++)
     vkomp_flow_stage_execution_resources_free(ctx.device, stages_resources[i]);
-  free(stages_compiled);
   free(stages_resources);
-  vkDestroyDescriptorPool(ctx.device, flow->descriptor_pool, NULL);
+  vkDestroyDescriptorPool(ctx.device, descriptor_pool, NULL);
   return err;
 }
 

@@ -114,20 +114,16 @@ typedef struct {
   uint32_t           work_group_count;
 } VkompFlowStage;
 
-// The compiled static resources of a compute shader. This can be reused across multiple
-// dispatches of the same shader.
-typedef struct {
-  VkPipelineLayout pipeline_layout;
-  VkShaderModule shader;
-  VkDescriptorSetLayout descriptor_set_layout;
-  VkPipeline pipeline;
-} VkompFlowStageCompiled;
-
 // The execution-time resources of a compute shader. Can be reused.
+// This can be reused across multiple dispatches of the same shader.
 typedef struct {
-  VkCommandBuffer   cmd_buf;
-  VkDescriptorSet   descriptor_set;
-  VkEvent           done_event;
+  VkPipelineLayout      pipeline_layout;
+  VkShaderModule        shader;
+  VkDescriptorSetLayout descriptor_set_layout;
+  VkPipeline            pipeline;
+  VkCommandBuffer       cmd_buf;
+  VkDescriptorSet       descriptor_set;
+  VkEvent               done_event;
 } VkompFlowStageExecutionResources;
 
 // A structure which holds runtime state for a pipeline of one or more
@@ -137,7 +133,6 @@ typedef struct {
 typedef struct {
   uint32_t                          stages_len;
   VkompFlowStage*                   stages;
-  VkompFlowStageCompiled*           stages_compiled;
   VkompFlowStageExecutionResources* stages_resources;
   VkDescriptorPool                  descriptor_pool;
 } VkompFlow;
