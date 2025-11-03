@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 
 // Represents a vulkan device that supports compute shaders.
-typedef struct {
+typedef struct VkompDeviceInfo {
   VkPhysicalDeviceProperties properties;
   VkPhysicalDevice           dev_phy;
   uint32_t                   compute_queue_family;
@@ -36,7 +36,7 @@ int vkomp_get_best_device(VkInstance instance, VkompDeviceInfo* device);
 int vkomp_get_best_gpu(VkInstance instance, VkompDeviceInfo* device);
 
 // A context which encapsulates the runtime state of libvkomp.
-typedef struct {
+typedef struct VkompContext {
   VkDevice          device;
   VkompDeviceInfo*  device_info;
   VkCommandPool     cmd_pool;
@@ -58,7 +58,7 @@ typedef enum VkompBufferType {
 } VkompBufferType;
 
 // A buffer with memory backing.
-typedef struct {
+typedef struct VkompBuffer {
   VkDeviceMemory memory;
   VkBuffer buffer;
   size_t size;
@@ -88,7 +88,7 @@ void vkomp_buffer_unmap(VkompContext ctx, VkompBuffer compbuf);
 // shader has run, but before the next compute flow stage begins.
 // If `before_shader` is true, the copy will be executed before the stages's
 // shader has run.
-typedef struct {
+typedef struct VkompBufferCopyOp {
   VkompBuffer* src;
   VkompBuffer* dest;
   bool         before_shader;
@@ -99,7 +99,7 @@ typedef struct {
 
 // A user-supplied structure describing a compute shader, its buffers for I/O, and
 // extra options such as buffer-to-buffer copy operations or runtime constants.
-typedef struct {
+typedef struct VkompFlowStage {
   VkompBuffer*       compute_buffers;
   uint32_t           compute_buffers_len;
   VkompBufferCopyOp* copy_ops;
@@ -116,7 +116,7 @@ typedef struct {
 
 // The execution-time resources of a compute shader. Can be reused.
 // This can be reused across multiple dispatches of the same shader.
-typedef struct {
+typedef struct VkompFlowStageExecutionResources {
   VkPipelineLayout      pipeline_layout;
   VkShaderModule        shader;
   VkDescriptorSetLayout descriptor_set_layout;
@@ -130,7 +130,7 @@ typedef struct {
 // vulkan compute shaders. Each 'stage' in the pipeline is represented
 // by a `VkompFlowStage`, and its shader executes only after the prior
 // stage has completed.
-typedef struct {
+typedef struct VkompFlow {
   uint32_t                          stages_len;
   VkompFlowStageExecutionResources* stages_resources;
   VkDescriptorPool                  descriptor_pool;
