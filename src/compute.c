@@ -340,6 +340,7 @@ int vkomp_flow_init(
     // Write the commands to the command buffer.
     VkCommandBufferBeginInfo begin_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
     };
     err = vkBeginCommandBuffer(cmd_buf, &begin_info);
     if (err) goto cleanup;
@@ -446,35 +447,82 @@ int vkomp_flow_run(
   VkompContext ctx,
   VkompFlow flow
 ) {
+  VkompFlow* flows[] = { &flow };
+  return vkomp_flows_run_sequential(ctx, flows, 1);
+}
+
+int vkomp_flows_run_sequential(
+  VkompContext ctx,
+  VkompFlow** flows,
+  uint32_t flows_len
+) {
   VkQueue queue;
   vkGetDeviceQueue(ctx.device, ctx.device_info->compute_queue_family, 0, &queue);
 
   // We create a fence to await the final output.
-  VkFenceCreateInfo fence_create_info = {
-    .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-  };
-
+  VkFenceCreateInfo fence_create_info = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
   VkFence fence;
   int err = vkCreateFence(ctx.device, &fence_create_info, NULL, &fence);
   if (err) return err;
 
-  // Submit all commands.
-  VkSubmitInfo* submit_infos = malloc(sizeof(VkSubmitInfo) * flow.stages_len);
-  for (uint32_t i = 0; i < flow.stages_len; i++) {
-    submit_infos[i] = (VkSubmitInfo) {
+  VkSemaphore*  semaphores   = malloc((flows_len - 1) * sizeof(VkSemaphore));
+  VkSubmitInfo* submit_infos = malloc(flows_len * sizeof(VkSubmitInfo));
+
+  uint32_t submit_infos_initialized = 0;
+  uint32_t semaphores_initialized   = 0;
+
+  // Initialize semaphores to synchronize submissions. No semaphore needed
+  // for the final flow because nothing awaits it but the fence.
+  VkSemaphoreCreateInfo semaphore_create_info = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+  for (uint32_t i = 0; i < flows_len - 1; i++) {
+    err = vkCreateSemaphore(ctx.device, &semaphore_create_info, NULL, &semaphores[i]);
+    if (err) goto cleanup;
+    semaphores_initialized += 1;
+  }
+
+  VkPipelineStageFlags dest_stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+  for (uint32_t i = 0; i < flows_len; i++) {
+    // Fill this submission with the command buffers from flow `i`.
+    VkCommandBuffer* cmd_bufs = malloc(flows[i]->stages_len * sizeof(VkCommandBuffer));
+    for (uint32_t j = 0; j < flows[i]->stages_len; j++) {
+      cmd_bufs[j] = flows[i]->stages_resources[j].cmd_buf;
+    }
+    VkSubmitInfo submit_info = {
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &flow.stages_resources[i].cmd_buf,
+      .commandBufferCount = flows[i]->stages_len,
+      .pCommandBuffers = cmd_bufs,
     };
+
+    // Each flow's submission should await the prior flow.
+    if (i > 0) {
+      submit_info.waitSemaphoreCount = 1;
+      submit_info.pWaitSemaphores = &semaphores[i - 1];
+      submit_info.pWaitDstStageMask = &dest_stage_mask; // needed or else segfault
+    }
+    if (i < flows_len - 1) {
+      submit_info.signalSemaphoreCount = 1;
+      submit_info.pSignalSemaphores = &semaphores[i];
+    }
+
+    submit_infos[i] = submit_info;
+    submit_infos_initialized += 1;
   }
 
   // We submit the command buffers on the queue, at the same time giving a fence.
-  err = vkQueueSubmit(queue, flow.stages_len, submit_infos, fence);
+  err = vkQueueSubmit(queue, submit_infos_initialized, submit_infos, fence);
   if (err) goto cleanup;
 
   err = vkWaitForFences(ctx.device, 1, &fence, VK_TRUE, 100e9);
 
 cleanup:
+  for (uint32_t i = 0; i < semaphores_initialized; i++) {
+    vkDestroySemaphore(ctx.device, semaphores[i], NULL);
+  }
+  for (uint32_t i = 0; i < submit_infos_initialized; i++) {
+    free((void*) submit_infos[i].pCommandBuffers);
+  }
+  free(semaphores);
   free(submit_infos);
   vkDestroyFence(ctx.device, fence, NULL);
   return err;

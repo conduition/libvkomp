@@ -150,6 +150,9 @@ int vkomp_flow_init(
 // Execute the shader pipeline, completing each shader stage in turn.
 // Synchronous. Waits until the final shader stage completes before returning.
 int vkomp_flow_run(VkompContext ctx, VkompFlow flow);
+// Execute a sequence of shader flows in order. `flows` may contain duplicate pointers:
+// those flows will be run multiple times, according to their appearances in the `flows` array.
+int vkomp_flows_run_sequential(VkompContext ctx, VkompFlow** flows, uint32_t flows_len);
 
 // Print convert a vulkan or libvkomp error code into a string.
 // Always returns a non-null pointer.
