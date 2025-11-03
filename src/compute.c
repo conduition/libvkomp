@@ -377,9 +377,14 @@ int vkomp_flow_init(
         cmd_buf,
         1, // num events
         &stages_resources[i - 1].done_event,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         0, NULL, 0, NULL, 0, NULL
+      );
+      vkCmdResetEvent(
+        cmd_buf,
+        stages_resources[i - 1].done_event,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
       );
     }
 
