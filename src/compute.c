@@ -470,6 +470,7 @@ int vkomp_flow_run(
   err = vkWaitForFences(ctx.device, 1, &fence, VK_TRUE, 100e9);
 
 cleanup:
+  free(submit_infos);
   vkDestroyFence(ctx.device, fence, NULL);
   return err;
 }
